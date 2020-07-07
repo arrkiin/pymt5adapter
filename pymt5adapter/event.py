@@ -20,7 +20,8 @@ class EVENT(enum.IntFlag):
 def iter_event(symbol: Union[str, SymbolInfo],
                timeframe: TIMEFRAME,
                event_flags: Union[EVENT, int],
-               sleep: float = 0.001):
+               sleep: float = 0.001,
+               delta: timedelta = timedelta(0)):
     if event_flags == 0:
         return
     symbol = getattr(symbol, 'name', symbol_info(symbol))
@@ -35,7 +36,7 @@ def iter_event(symbol: Union[str, SymbolInfo],
     while True:
         if do_tick_event:
             now = datetime.now()
-            last_tick_time = now - timedelta(seconds=1) if last_tick is None else datetime.fromtimestamp(last_tick.time)
+            last_tick_time = now + delta - timedelta(seconds=1) if last_tick is None else datetime.fromtimestamp(last_tick.time)
             if last_tick_time > now:
                 now, last_tick_time = last_tick_time, now
             ticks = copy_ticks_range(symbol.name, last_tick_time, now, COPY_TICKS.ALL)
@@ -46,7 +47,7 @@ def iter_event(symbol: Union[str, SymbolInfo],
                         yield EVENT.TICK_LAST_CHANGE, tick
                         last_tick = tick
         if do_new_bar_event:
-            if datetime.now() >= next_bar_time:
+            if datetime.now() + delta >= next_bar_time:
                 bar = copy_rates_from_pos(symbol.name, timeframe, 0, 1)[0]
                 if (bar_time := bar['time']) != last_bar['time']:
                     yield EVENT.NEW_BAR, CopyRate(*bar)
